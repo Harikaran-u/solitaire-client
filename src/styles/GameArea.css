@@ -1,0 +1,30 @@
+.game-area-container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.game-board-main-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-piles-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.pile-container {
+  display: flex;
+  flex-direction: column;
+  width: 120px;
+  position: relative;
+}
+.card-container {
+  width: 100%;
+  cursor: grab;
+}
+
+.card-img {
+  width: 100px;
+}

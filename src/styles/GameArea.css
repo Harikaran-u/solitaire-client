@@ -12,6 +12,8 @@
   display: flex;
   justify-content: space-between;
   width: 100%;
+  padding: 10px;
+  min-height: 100vh;
 }
 
 .pile-container {
@@ -21,10 +23,27 @@
   position: relative;
 }
 .card-container {
-  width: 100%;
   cursor: grab;
 }
 
 .card-img {
   width: 100px;
+}
+
+.extra-cards-main-container {
+  perspective: 1000px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px;
+  padding-right: 50px;
+}
+
+.extra-cards {
+  width: 120px;
+  transition: transform 1s ease-in-out;
+  cursor: pointer;
+}
+
+.extra-cards:hover {
+  transform: rotate(360deg);
 }

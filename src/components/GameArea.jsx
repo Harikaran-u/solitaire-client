@@ -92,6 +92,12 @@ const GameArea = () => {
               </div>
             ))}
           </div>
+          <div className="extra-cards-main-container">
+            <img
+              src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727269034/kindpng_1537437_kujhfw.png"
+              className="extra-cards"
+            />
+          </div>
         </div>
       )}
     </div>

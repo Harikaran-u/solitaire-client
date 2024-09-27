@@ -98,6 +98,135 @@ const GameArea = () => {
   //   }
   // }, [pilesData]);
 
+  const handleDragStart = (e, pileNumber, cardPosition) => {
+    const cardList = pilesData[pileNumber];
+    const cardsFromPosition = cardList.slice(cardPosition);
+    const isValidSwap = cardsFromPosition.every((eachCard, index) => {
+      if (index === 0) {
+        return true;
+      }
+      return (
+        getRankNumber(cardsFromPosition[index - 1].rank) -
+          getRankNumber(eachCard.rank) ===
+        1
+      );
+    });
+
+    if (isValidSwap) {
+      console.log(cardsFromPosition);
+      const cardDetails = {
+        deckNumber: pileNumber,
+        dropCardIndex: cardPosition,
+        dropCardList: cardsFromPosition,
+      };
+      e.dataTransfer.setData("drag-card", JSON.stringify(cardDetails));
+    } else {
+      e.dataTransfer.setData(
+        "drag-card",
+        JSON.stringify({
+          notDraggable: true,
+        })
+      );
+    }
+
+    // const card = cardList[cardPosition];
+  };
+
+  const handleDragEnd = (e) => {
+    e.dataTransfer.clearData();
+  };
+
+  const handleDrop = (e, pileNumber, cardPosition) => {
+    e.preventDefault();
+    const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
+    const { notDraggable } = cardDetails;
+    if (!notDraggable) {
+      const { deckNumber, dropCardIndex, dropCardList } = cardDetails;
+      const onTopCard = pilesData[pileNumber][cardPosition];
+      // console.log(onTopCard);
+      const topCardRank = getRankNumber(onTopCard.rank);
+      const dropCardRank = getRankNumber(dropCardList[0].rank);
+      const rankDiff = topCardRank - dropCardRank;
+
+      if (rankDiff == 1) {
+        setPilesData((prevPiles) => {
+          const newPilesData = { ...prevPiles };
+          newPilesData[pileNumber].push(...dropCardList);
+
+          if (dropCardIndex > 0) {
+            newPilesData[deckNumber][dropCardIndex - 1].isFlipped = true;
+            newPilesData[deckNumber].splice(dropCardIndex);
+          } else {
+            newPilesData[deckNumber].splice(dropCardIndex);
+          }
+
+          // console.log(newPilesData);
+          const lastDeck = newPilesData[pileNumber].slice(-13);
+          if (lastDeck.length === 13) {
+            const isValidSwap = lastDeck.every((eachCard, index) => {
+              if (index === 0) {
+                return true;
+              }
+              return (
+                getRankNumber(lastDeck[index - 1].rank) -
+                  getRankNumber(eachCard.rank) ===
+                1
+              );
+            });
+            if (isValidSwap) {
+              const fromIndex = newPilesData[pileNumber].length - 13;
+              console.log(fromIndex);
+              newPilesData[pileNumber].splice(fromIndex);
+              if (newPilesData[pileNumber].length > 0) {
+                newPilesData[pileNumber][
+                  newPilesData[pileNumber].length - 1
+                ].isFlipped = true;
+              }
+            }
+          }
+
+          return newPilesData;
+        });
+      }
+    }
+    // console.log(card);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const getRankNumber = (rankStr) => {
+    switch (rankStr) {
+      case "A":
+        return 1;
+
+      case "K":
+        return 13;
+
+      case "Q":
+        return 12;
+
+      case "J":
+        return 11;
+      default:
+        return parseInt(rankStr);
+    }
+  };
+
+  const handleNewDrop = (e, pileNumber) => {
+    e.preventDefault();
+    const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
+    const { dropCardList } = cardDetails;
+    console.log("dropnew", dropCardList);
+
+    setPilesData((prevPiles) => {
+      const newPilesData = { ...prevPiles };
+      newPilesData[pileNumber].push(...dropCardList);
+      return newPilesData;
+    });
+  };
+
   return (
     <div className="game-area-container">
       {!isStarted && <StartGame triggerGame={onClickStartGame} />}
@@ -115,17 +244,35 @@ const GameArea = () => {
                       left: "10px",
                     }}
                     key={index}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, eachKey, index)}
+                    onDragEnd={(e) => handleDragEnd(e)}
+                    onDrop={(e) => handleDrop(e, eachKey, index)}
+                    onDragOver={(e) => handleDragOver(e)}
                   >
                     <img
                       src={
-                        eachCard.isFlipped
-                          ? eachCard.cardImgUrl
+                        eachCard?.isFlipped
+                          ? eachCard?.cardImgUrl
                           : "https://res.cloudinary.com/diuvnny8c/image/upload/v1727269034/kindpng_1537437_kujhfw.png"
                       }
                       className="card-img"
                     />
                   </div>
                 ))}
+                {pilesData[eachKey].length === 0 && (
+                  <div
+                    draggable
+                    onDrop={(e) => handleNewDrop(e, eachKey)}
+                    onDragOver={(e) => handleDragOver(e)}
+                    className="card-container"
+                  >
+                    <img
+                      src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727444092/Blank-Playing-Card_fo8xoq.png"
+                      className="card-img"
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

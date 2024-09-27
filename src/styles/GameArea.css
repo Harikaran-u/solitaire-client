@@ -31,7 +31,6 @@
 }
 
 .extra-cards-main-container {
-  perspective: 1000px;
   display: flex;
   justify-content: flex-end;
   padding: 10px;
@@ -40,10 +39,5 @@
 
 .extra-cards {
   width: 120px;
-  transition: transform 1s ease-in-out;
   cursor: pointer;
-}
-
-.extra-cards:hover {
-  transform: rotate(360deg);
 }

@@ -7,14 +7,17 @@ import SockJS from "sockjs-client";
 import StartGame from "./StartGame";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
+import GameSuccess from "./GameSuccess";
 
 const GameArea = () => {
   const [pilesData, setPilesData] = useState([]);
   const [extraCards, setExtraCards] = useState([]);
   const [isStarted, setIsStarted] = useState(false);
   const [selectedCardsDetails, setSelectedCardsDetails] = useState(null);
-  const [validSetCount, setValidSetCount] = useState(0);
+  const [validSetCount, setValidSetCount] = useState(8);
   const [score, setScore] = useState(500);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const { width, height } = useWindowSize();
   const clientRef = useRef(null);
 
   useEffect(() => {
@@ -184,6 +187,8 @@ const GameArea = () => {
                   newPilesData[pileNumber].length - 1
                 ].isFlipped = true;
               }
+              setShowConfetti(true);
+              setTimeout(() => setShowConfetti(false), 5000);
             }
           }
 
@@ -254,12 +259,12 @@ const GameArea = () => {
   return (
     <div className="game-area-container">
       {!isStarted && <StartGame triggerGame={onClickStartGame} />}
-      {isStarted && (
+      {isStarted && validSetCount < 8 && (
         <div className="game-board-main-container">
           <nav className="nav-score-container">
             <img
               className="nav-logo"
-              src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727520228/Solitaire-logo-removebg-preview_vcq9wv.png"
+              src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727533075/Solitaire-logo_b0cqbm.png"
             />
 
             <h2 className="score-head">
@@ -332,8 +337,10 @@ const GameArea = () => {
               />
             )}
           </div>
+          {showConfetti && <Confetti width={width} height={height} />}
         </div>
       )}
+      {validSetCount === 8 && <GameSuccess totalScore={score} />}
     </div>
   );
 };

@@ -8,12 +8,28 @@
   flex-direction: column;
 }
 
+.nav-score-container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgb(255, 255, 255);
+  height: 60px;
+  padding: 4px;
+}
+
+.nav-logo {
+  width: 50px;
+  height: 50px;
+}
+
 .main-piles-container {
   display: flex;
   justify-content: space-between;
   width: 100%;
   padding: 10px;
   min-height: 100vh;
+  position: relative;
 }
 
 .pile-container {
@@ -32,12 +48,32 @@
 
 .extra-cards-main-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 10px;
   padding-right: 50px;
+}
+
+.success-cards {
+  width: 120px;
+  border-radius: 12px;
 }
 
 .extra-cards {
   width: 120px;
   cursor: pointer;
+}
+
+.score-head {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.score-value {
+  background: linear-gradient(45deg, #ff4500, #ffd700);
+  color: #ffffff;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 5px;
+  display: inline-block;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }

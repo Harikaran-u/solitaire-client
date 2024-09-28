@@ -5,13 +5,16 @@ import { useEffect, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import StartGame from "./StartGame";
-
-// const cardKeySet = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+import Confetti from "react-confetti";
+import { useWindowSize } from "react-use";
 
 const GameArea = () => {
   const [pilesData, setPilesData] = useState([]);
   const [extraCards, setExtraCards] = useState([]);
   const [isStarted, setIsStarted] = useState(false);
+  const [selectedCardsDetails, setSelectedCardsDetails] = useState(null);
+  const [validSetCount, setValidSetCount] = useState(0);
+  const [score, setScore] = useState(500);
   const clientRef = useRef(null);
 
   useEffect(() => {
@@ -76,7 +79,7 @@ const GameArea = () => {
   const onClickExtraCards = () => {
     const cardSet = extraCards.slice(0, 10);
     setExtraCards((prevExtraCards) => prevExtraCards.slice(10));
-
+    setScore((prevScore) => prevScore - 1);
     setPilesData((prevPiles) => {
       const newPilesData = {};
       const keySet = Object.keys(prevPiles);
@@ -88,19 +91,14 @@ const GameArea = () => {
     });
   };
 
-  // useEffect(() => {
-  //   if (clientRef.current && clientRef.current.connected) {
-  //     console.log("inside request");
-  //     clientRef.current.publish({
-  //       destination: "/app/cards/updated",
-  //       body: JSON.stringify(pilesData),
-  //     });
-  //   }
-  // }, [pilesData]);
-
   const handleDragStart = (e, pileNumber, cardPosition) => {
     const cardList = pilesData[pileNumber];
     const cardsFromPosition = cardList.slice(cardPosition);
+    setSelectedCardsDetails({
+      deckNumber: pileNumber,
+      dropCardIndex: cardPosition,
+      dropCardList: cardsFromPosition,
+    });
     const isValidSwap = cardsFromPosition.every((eachCard, index) => {
       if (index === 0) {
         return true;
@@ -149,6 +147,7 @@ const GameArea = () => {
       const rankDiff = topCardRank - dropCardRank;
 
       if (rankDiff == 1) {
+        setScore((prevScore) => prevScore - 1);
         setPilesData((prevPiles) => {
           const newPilesData = { ...prevPiles };
           newPilesData[pileNumber].push(...dropCardList);
@@ -174,9 +173,12 @@ const GameArea = () => {
               );
             });
             if (isValidSwap) {
+              setScore((prevScore) => prevScore + 101);
               const fromIndex = newPilesData[pileNumber].length - 13;
-              console.log(fromIndex);
+              // console.log(fromIndex);
               newPilesData[pileNumber].splice(fromIndex);
+              setValidSetCount((prev) => prev + 1);
+
               if (newPilesData[pileNumber].length > 0) {
                 newPilesData[pileNumber][
                   newPilesData[pileNumber].length - 1
@@ -214,17 +216,39 @@ const GameArea = () => {
     }
   };
 
+  // const handleNewDrop = (e, pileNumber) => {
+  //   e.preventDefault();
+  //   const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
+  //   const { deckNumber, dropCardIndex } = selectedCardsDetails;
+  //   const { dropCardList } = cardDetails;
+
+  //   if (dropCardList) {
+  //     setPilesData((prevPiles) => {
+  //       const newPilesData = { ...prevPiles };
+  //       newPilesData[pileNumber].push(...dropCardList);
+  //       newPilesData[deckNumber].splice(dropCardIndex);
+  //       newPilesData[deckNumber][
+  //         newPilesData[deckNumber].length - 1
+  //       ].isFlipped = true;
+  //       return newPilesData;
+  //     });
+  //   }
+  // };
+
   const handleNewDrop = (e, pileNumber) => {
     e.preventDefault();
-    const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
-    const { dropCardList } = cardDetails;
-    console.log("dropnew", dropCardList);
+    const { deckNumber, dropCardIndex } = selectedCardsDetails;
+    const { dropCardList } = JSON.parse(e.dataTransfer.getData("drag-card"));
 
-    setPilesData((prevPiles) => {
-      const newPilesData = { ...prevPiles };
-      newPilesData[pileNumber].push(...dropCardList);
-      return newPilesData;
-    });
+    if (dropCardList) {
+      setPilesData((prevPiles) => {
+        const newPilesData = { ...prevPiles };
+        newPilesData[pileNumber].push(...dropCardList);
+        newPilesData[deckNumber].splice(dropCardIndex);
+        newPilesData[deckNumber].at(-1).isFlipped = true;
+        return newPilesData;
+      });
+    }
   };
 
   return (
@@ -232,6 +256,16 @@ const GameArea = () => {
       {!isStarted && <StartGame triggerGame={onClickStartGame} />}
       {isStarted && (
         <div className="game-board-main-container">
+          <nav className="nav-score-container">
+            <img
+              className="nav-logo"
+              src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727520228/Solitaire-logo-removebg-preview_vcq9wv.png"
+            />
+
+            <h2 className="score-head">
+              Score: <span className="score-value">{score}</span>
+            </h2>
+          </nav>
           <div className="main-piles-container">
             {Object.keys(pilesData).map((eachKey) => (
               <div className="pile-container" key={eachKey}>
@@ -276,15 +310,28 @@ const GameArea = () => {
               </div>
             ))}
           </div>
-          {extraCards.length > 0 && (
-            <div className="extra-cards-main-container">
+          <div className="extra-cards-main-container">
+            {validSetCount > 0 && (
+              <div className="success-cards-container">
+                {Array.from({ length: validSetCount }).map((eachSet) => {
+                  return (
+                    <img
+                      src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727516053/Leonardo_Phoenix_A_regal_ornate_illustration_of_the_golden_Kin_2_uqoo7x.jpg"
+                      className="success-cards"
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {extraCards.length > 0 && (
               <img
                 src="https://res.cloudinary.com/diuvnny8c/image/upload/v1727269034/kindpng_1537437_kujhfw.png"
                 className="extra-cards"
                 onClick={onClickExtraCards}
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

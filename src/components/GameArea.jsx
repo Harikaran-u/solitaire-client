@@ -14,7 +14,7 @@ const GameArea = () => {
   const [extraCards, setExtraCards] = useState([]);
   const [isStarted, setIsStarted] = useState(false);
   const [selectedCardsDetails, setSelectedCardsDetails] = useState(null);
-  const [validSetCount, setValidSetCount] = useState(8);
+  const [validSetCount, setValidSetCount] = useState(0);
   const [score, setScore] = useState(500);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
@@ -114,11 +114,11 @@ const GameArea = () => {
     });
 
     if (isValidSwap) {
-      console.log(cardsFromPosition);
       const cardDetails = {
         deckNumber: pileNumber,
         dropCardIndex: cardPosition,
         dropCardList: cardsFromPosition,
+        notDraggable: false,
       };
       e.dataTransfer.setData("drag-card", JSON.stringify(cardDetails));
     } else {
@@ -129,8 +129,6 @@ const GameArea = () => {
         })
       );
     }
-
-    // const card = cardList[cardPosition];
   };
 
   const handleDragEnd = (e) => {
@@ -141,10 +139,10 @@ const GameArea = () => {
     e.preventDefault();
     const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
     const { notDraggable } = cardDetails;
+
     if (!notDraggable) {
       const { deckNumber, dropCardIndex, dropCardList } = cardDetails;
       const onTopCard = pilesData[pileNumber][cardPosition];
-      // console.log(onTopCard);
       const topCardRank = getRankNumber(onTopCard.rank);
       const dropCardRank = getRankNumber(dropCardList[0].rank);
       const rankDiff = topCardRank - dropCardRank;
@@ -157,13 +155,12 @@ const GameArea = () => {
 
           if (dropCardIndex > 0) {
             newPilesData[deckNumber][dropCardIndex - 1].isFlipped = true;
-            newPilesData[deckNumber].splice(dropCardIndex);
-          } else {
-            newPilesData[deckNumber].splice(dropCardIndex);
           }
 
-          // console.log(newPilesData);
+          newPilesData[deckNumber].splice(dropCardIndex);
+
           const lastDeck = newPilesData[pileNumber].slice(-13);
+
           if (lastDeck.length === 13) {
             const isValidSwap = lastDeck.every((eachCard, index) => {
               if (index === 0) {
@@ -178,15 +175,14 @@ const GameArea = () => {
             if (isValidSwap) {
               setScore((prevScore) => prevScore + 101);
               const fromIndex = newPilesData[pileNumber].length - 13;
-              // console.log(fromIndex);
               newPilesData[pileNumber].splice(fromIndex);
               setValidSetCount((prev) => prev + 1);
 
-              if (newPilesData[pileNumber].length > 0) {
-                newPilesData[pileNumber][
-                  newPilesData[pileNumber].length - 1
-                ].isFlipped = true;
+              const lastCard = newPilesData[pileNumber].at(-1);
+              if (lastCard !== undefined) {
+                lastCard.isFlipped = true;
               }
+
               setShowConfetti(true);
               setTimeout(() => setShowConfetti(false), 5000);
             }
@@ -250,7 +246,11 @@ const GameArea = () => {
         const newPilesData = { ...prevPiles };
         newPilesData[pileNumber].push(...dropCardList);
         newPilesData[deckNumber].splice(dropCardIndex);
-        newPilesData[deckNumber].at(-1).isFlipped = true;
+        const lastCard = newPilesData[deckNumber].at(-1);
+        if (lastCard !== undefined) {
+          lastCard.isFlipped = true;
+        }
+
         return newPilesData;
       });
     }

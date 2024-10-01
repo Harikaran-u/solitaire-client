@@ -1,13 +1,13 @@
-import React, { useRef } from "react";
-import "../styles/GameArea.css";
-
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import StartGame from "./StartGame";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
+
 import GameSuccess from "./GameSuccess";
+
+import "../styles/GameArea.css";
 
 const GameArea = () => {
   const [pilesData, setPilesData] = useState([]);
@@ -15,7 +15,7 @@ const GameArea = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [selectedCardsDetails, setSelectedCardsDetails] = useState(null);
   const [validSetCount, setValidSetCount] = useState(0);
-  const [score, setScore] = useState(500);
+  const [score, setScore] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
   const clientRef = useRef(null);
@@ -29,24 +29,23 @@ const GameArea = () => {
         console.log("Connected to web Socket");
         if (!clientRef.current) {
           clientRef.current = stompClient;
-          stompClient.subscribe("/topic/cardList", (message) => {
-            const pilesData = JSON.parse(message.body);
-            setPilesData(pilesData);
-          });
-          stompClient.subscribe("/topic/extraCards", (message) => {
-            const extraCards = JSON.parse(message.body);
-            setExtraCards(extraCards);
-          });
-          // stompClient.subscribe("/topic/updatedCards", (message) => {
-          //   console.log(message.body);
-          // });
+          stompClient.subscribe("/topic/cardList", handlePileCards);
+          stompClient.subscribe("/topic/extraCards", handleExtraCards);
+          stompClient.subscribe("/topic/updatedCards", handleUpdatedCards);
+          stompClient.subscribe("/topic/score", handleGetScore);
         }
       },
       onStompError: (frame) => {
         console.error("Broker Error: " + frame.headers["message"]);
       },
-      onWebSocketClose: () => {
-        console.log("connection lost");
+      onWebSocketClose: (event) => {
+        console.log("WebSocket connection lost.");
+        console.log("Close event details:", event);
+        if (event) {
+          console.log("Code:", event.code);
+          console.log("Reason:", event.reason);
+          console.log("Was Clean:", event.wasClean);
+        }
       },
       onReconnect: () => {
         console.log("WebSocket reconnected.");
@@ -61,6 +60,26 @@ const GameArea = () => {
     };
   }, []);
 
+  const handlePileCards = (message) => {
+    const pilesData = JSON.parse(message.body);
+    setPilesData(pilesData);
+  };
+
+  const handleExtraCards = (message) => {
+    const extraCards = JSON.parse(message.body);
+    setExtraCards(extraCards);
+  };
+
+  const handleUpdatedCards = (message) => {
+    const updatedCards = JSON.parse(message.body);
+    setPilesData(updatedCards);
+    console.log("whole", updatedCards);
+  };
+
+  const handleGetScore = (message) => {
+    setScore(parseInt(message.body));
+  };
+
   const getPileCards = () => {
     if (clientRef.current) {
       clientRef.current.publish({ destination: "/app/cards/piles" });
@@ -73,25 +92,38 @@ const GameArea = () => {
     }
   };
 
+  const getScore = () => {
+    if (clientRef.current) {
+      clientRef.current.publish({ destination: "/app/cards/score" });
+    }
+  };
+
+  const updateScore = (type) => {
+    if (clientRef.current && clientRef.current.connected) {
+      clientRef.current.publish({
+        destination: "/app/cards/update-score",
+        body: type,
+      });
+    }
+  };
+
   const onClickStartGame = () => {
     setIsStarted(true);
     getPileCards();
     getExtraCards();
+    getScore();
   };
 
   const onClickExtraCards = () => {
     const cardSet = extraCards.slice(0, 10);
     setExtraCards((prevExtraCards) => prevExtraCards.slice(10));
-    setScore((prevScore) => prevScore - 1);
-    setPilesData((prevPiles) => {
-      const newPilesData = {};
-      const keySet = Object.keys(prevPiles);
-      keySet.forEach((key) => {
-        const keyIndex = parseInt(key);
-        newPilesData[key] = [...prevPiles[key], cardSet[keyIndex - 1]];
+    if (clientRef.current && clientRef.current.connected) {
+      clientRef.current.publish({
+        destination: "/app/cards/updated",
+        body: JSON.stringify(cardSet),
       });
-      return newPilesData;
-    });
+    }
+    updateScore("MOVE");
   };
 
   const handleDragStart = (e, pileNumber, cardPosition) => {
@@ -148,7 +180,6 @@ const GameArea = () => {
       const rankDiff = topCardRank - dropCardRank;
 
       if (rankDiff == 1) {
-        setScore((prevScore) => prevScore - 1);
         setPilesData((prevPiles) => {
           const newPilesData = { ...prevPiles };
           newPilesData[pileNumber].push(...dropCardList);
@@ -173,7 +204,6 @@ const GameArea = () => {
               );
             });
             if (isValidSwap) {
-              setScore((prevScore) => prevScore + 101);
               const fromIndex = newPilesData[pileNumber].length - 13;
               newPilesData[pileNumber].splice(fromIndex);
               setValidSetCount((prev) => prev + 1);
@@ -185,7 +215,12 @@ const GameArea = () => {
 
               setShowConfetti(true);
               setTimeout(() => setShowConfetti(false), 5000);
+              updateScore("SUCCESS");
+            } else {
+              updateScore("MOVE");
             }
+          } else {
+            updateScore("MOVE");
           }
 
           return newPilesData;
@@ -216,25 +251,6 @@ const GameArea = () => {
         return parseInt(rankStr);
     }
   };
-
-  // const handleNewDrop = (e, pileNumber) => {
-  //   e.preventDefault();
-  //   const cardDetails = JSON.parse(e.dataTransfer.getData("drag-card"));
-  //   const { deckNumber, dropCardIndex } = selectedCardsDetails;
-  //   const { dropCardList } = cardDetails;
-
-  //   if (dropCardList) {
-  //     setPilesData((prevPiles) => {
-  //       const newPilesData = { ...prevPiles };
-  //       newPilesData[pileNumber].push(...dropCardList);
-  //       newPilesData[deckNumber].splice(dropCardIndex);
-  //       newPilesData[deckNumber][
-  //         newPilesData[deckNumber].length - 1
-  //       ].isFlipped = true;
-  //       return newPilesData;
-  //     });
-  //   }
-  // };
 
   const handleNewDrop = (e, pileNumber) => {
     e.preventDefault();
